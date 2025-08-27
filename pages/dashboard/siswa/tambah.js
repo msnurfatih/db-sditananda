@@ -1,0 +1,83 @@
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { supabase } from '../../../utils/supabaseClient';
+import Layout from '../../../components/Layout';
+
+export default function TambahSiswaPage() {
+  const router = useRouter();
+
+  const [nisn, setNisn] = useState('');
+  const [nama, setNama] = useState('');
+  const [kelas, setKelas] = useState('');
+  const [jenisKelamin, setJenisKelamin] = useState('');
+  const [tempatLahir, setTempatLahir] = useState('');
+  const [tanggalLahir, setTanggalLahir] = useState('');
+  const [alamat, setAlamat] = useState('');
+  const [ayahNama, setAyahNama] = useState('');
+  const [ayahPekerjaan, setAyahPekerjaan] = useState('');
+  const [ibuNama, setIbuNama] = useState('');
+  const [ibuPekerjaan, setIbuPekerjaan] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!nisn.trim() || !nama.trim() || !kelas.trim()) {
+      alert('NISN, Nama, dan Kelas wajib diisi');
+      return;
+    }
+
+    const user = await supabase.auth.getUser();
+    const guru_id = user?.data?.user?.id;
+
+    const { error } = await supabase.from('siswa').insert([
+      {
+        nisn,
+        nama,
+        kelas,
+        jenis_kelamin: jenisKelamin,
+        tempat_lahir: tempatLahir,
+        tanggal_lahir: tanggalLahir,
+        alamat,
+        ayah_nama: ayahNama,
+        ayah_pekerjaan: ayahPekerjaan,
+        ibu_nama: ibuNama,
+        ibu_pekerjaan: ibuPekerjaan,
+        guru_id,
+      },
+    ]);
+
+    if (error) {
+      console.error(error);
+      alert('❌ Gagal menambahkan siswa. Pastikan NISN tidak duplikat.');
+    } else {
+      alert('✅ Siswa berhasil ditambahkan!');
+      router.push('/dashboard/siswa');
+    }
+  };
+
+  return (
+    <Layout pageTitle="Tambah Siswa">
+      <div className="p-6 max-w-2xl mx-auto">
+        <h1 className="text-2xl font-bold mb-4">➕ Tambah Siswa</h1>
+
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
+          <input value={nisn} onChange={(e) => setNisn(e.target.value)} placeholder="NISN" className="border p-2 rounded" />
+          <input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama Lengkap" className="border p-2 rounded" />
+          <input value={kelas} onChange={(e) => setKelas(e.target.value)} placeholder="Kelas" className="border p-2 rounded" />
+          <input value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} placeholder="Jenis Kelamin" className="border p-2 rounded" />
+          <input value={tempatLahir} onChange={(e) => setTempatLahir(e.target.value)} placeholder="Tempat Lahir" className="border p-2 rounded" />
+          <input value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} type="date" className="border p-2 rounded" />
+          <input value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Alamat" className="border p-2 rounded" />
+          <input value={ayahNama} onChange={(e) => setAyahNama(e.target.value)} placeholder="Nama Ayah" className="border p-2 rounded" />
+          <input value={ayahPekerjaan} onChange={(e) => setAyahPekerjaan(e.target.value)} placeholder="Pekerjaan Ayah" className="border p-2 rounded" />
+          <input value={ibuNama} onChange={(e) => setIbuNama(e.target.value)} placeholder="Nama Ibu" className="border p-2 rounded" />
+          <input value={ibuPekerjaan} onChange={(e) => setIbuPekerjaan(e.target.value)} placeholder="Pekerjaan Ibu" className="border p-2 rounded" />
+
+          <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+            Simpan Siswa
+          </button>
+        </form>
+      </div>
+    </Layout>
+  );
+}
