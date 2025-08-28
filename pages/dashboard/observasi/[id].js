@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../../utils/supabaseClient';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function ObservasiPage() {
   const router = useRouter();
@@ -199,3 +200,4 @@ export default function ObservasiPage() {
     </div>
   );
 }
+
