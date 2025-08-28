@@ -1,8 +1,8 @@
 // pages/dashboard/monitoring/index.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../../utils/supabaseClient';
-import Layout from '../../../components/Layout';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 import { ChartKarakter } from '../../../components/ChartKarakter';
 
 // Normalisasi 1 nilai jawaban (string/number/boolean) ke skala 1–4
