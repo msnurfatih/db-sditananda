@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import Layout from '../../../components/Layout';
-import { supabase } from '../../../utils/supabaseClient';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export const pageTitle = 'Hasil Evaluasi Siswa';
 
