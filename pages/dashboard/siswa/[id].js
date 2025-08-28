@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../../utils/supabaseClient';
-import Layout from '../../../components/Layout';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   LineChart, Line
@@ -277,3 +277,4 @@ export default function ProfilSiswaPage() {
     </Layout>
   );
 }
+
