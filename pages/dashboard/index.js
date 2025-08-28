@@ -1,84 +1,70 @@
-// pages/dashboard/observasi/index.js
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
-import Layout from '@/components/Layout'
-import { supabase } from '@/utils/supabaseClient'
+// pages/dashboard/index.js
 
-export const pageTitle = 'Observasi Karakter Siswa'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { supabase } from '../../utils/supabaseClient';
+import Layout from '../../components/Layout';
 
-export default function ObservasiIndexPage() {
-  const router = useRouter()
-  const [siswaList, setSiswaList] = useState([])
-  const [selectedId, setSelectedId] = useState('')
-  const [session, setSession] = useState(null)
+export default function Dashboard() {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
 
-  // Ambil data siswa lengkap dengan kelas
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setSession(session)
+    // Trigger ulang walau path sama
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return router.replace('/login');
+      setUser(session.user);
+    };
 
-      if (!session) return router.replace('/login')
+    checkSession();
+  }, [router.asPath]); // <- kunci agar refresh saat klik menu yang sama
 
-      const { data, error } = await supabase
-        .from('siswa')
-        .select('id, nama, kelas')
-        .order('kelas', { ascending: true })
-        .order('nama', { ascending: true })
-
-      if (error) {
-        console.error('Gagal ambil siswa:', error.message)
-      } else {
-        setSiswaList(data)
-      }
-    }
-    fetchData()
-  }, [router])
-
-  const handleSubmit = () => {
-    if (!selectedId) {
-      alert('Pilih siswa terlebih dahulu!')
-      return
-    }
-    router.push(`/dashboard/observasi/${selectedId}`)
-  }
-
-  const groupByKelas = (data) => {
-    return data.reduce((acc, curr) => {
-      const kelas = curr.kelas || 'Lainnya'
-      if (!acc[kelas]) acc[kelas] = []
-      acc[kelas].push(curr)
-      return acc
-    }, {})
+  if (!user) {
+    return (
+      <Layout>
+        <p>Memuat data pengguna…</p>
+      </Layout>
+    );
   }
 
   return (
-    <Layout pageTitle={pageTitle}>
-      <div className="p-6 max-w-3xl mx-auto">
-        <select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="w-full border p-2 rounded mb-4"
-        >
-          <option value="">-- Pilih Siswa --</option>
-          {Object.entries(groupByKelas(siswaList)).map(([kelas, siswas]) => (
-            <optgroup key={kelas} label={`Kelas ${kelas}`}>
-              {siswas.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.nama}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
+    <Layout>
+      <h1 className="text-2xl font-semibold mb-4">Dashboard Guru</h1>
+      <p>Selamat datang, <strong>{user.email}</strong>!</p>
 
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
         <button
-          onClick={handleSubmit}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mb-8"
+          onClick={() => router.push('/dashboard/siswa')}
+          className="bg-blue-600 text-white px-4 py-3 rounded hover:bg-blue-700"
         >
-          ✏️ Mulai Observasi
+          📘 Manajemen Siswa
+        </button>
+        <button
+          onClick={() => router.push('/dashboard/siswa/tambah')}
+          className="bg-green-600 text-white px-4 py-3 rounded hover:bg-green-700"
+        >
+          ➕ Tambah Siswa
+        </button>
+        <button
+          onClick={() => router.push('/dashboard/monitoring')}
+          className="bg-purple-600 text-white px-4 py-3 rounded hover:bg-purple-700"
+        >
+          📊 Monitoring Karakter
+        </button>
+        <button
+          onClick={() => router.push('/dashboard/evaluasi')}
+          className="bg-yellow-600 text-white px-4 py-3 rounded hover:bg-yellow-700"
+        >
+          📝 Evaluasi Sistem
+        </button>
+        <button
+          onClick={() => router.push('/dashboard/observasi')}
+          className="bg-pink-600 text-white px-4 py-3 rounded hover:bg-pink-700"
+        >
+          🧠 Observasi AI
         </button>
       </div>
     </Layout>
-  )
+  );
 }
