@@ -1,7 +1,7 @@
 // pages/dashboard/akun.js
 import React, { useEffect, useState } from 'react'
-import Layout from '../../components/Layout'
-import { supabase } from '../../utils/supabaseClient';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function ProfilGuru() {
   const [guru, setGuru] = useState(null)
