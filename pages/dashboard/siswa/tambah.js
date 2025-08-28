@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../../utils/supabaseClient';
-import Layout from '../../../components/Layout';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function TambahSiswaPage() {
   const router = useRouter();
