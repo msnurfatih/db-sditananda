@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
-import { supabase } from '../../../utils/supabaseClient';
-import Layout from '../../../components/Layout';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function UploadSiswaPage() {
   const [status, setStatus] = useState('');
@@ -118,3 +118,4 @@ export default function UploadSiswaPage() {
     </Layout>
   );
 }
+
