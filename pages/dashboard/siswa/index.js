@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Layout from '../../../components/Layout';
-import { supabase } from '../../../utils/supabaseClient';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
 
 export default function DaftarSiswaPerKelas() {
   const router = useRouter();
