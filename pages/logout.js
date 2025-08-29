@@ -1,6 +1,6 @@
 // pages/logout.js
 import { useEffect } from 'react';
-import supabase from '../utils/supabaseClient'
+import { supabase } from '../utils/supabaseClient'
 import { useRouter } from 'next/router';
 
 export default function Logout() {
@@ -12,3 +12,4 @@ export default function Logout() {
   }, []);
   return <div className="p-6 text-center">Logging out…</div>;
 }
+
