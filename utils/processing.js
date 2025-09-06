@@ -3,7 +3,7 @@
 import natural from 'natural';
 import { openai } from './openaiClient';
 
-// Inisialisasi TF-IDF
+// Inisialisasi global TF-IDF
 const tfidf = new natural.TfIdf();
 
 // Tambahkan dokumen ke koleksi TF-IDF
@@ -11,16 +11,18 @@ export function addDocument(text) {
   tfidf.addDocument(text);
 }
 
-// Hitung vektor TF-IDF untuk satu teks
+// Hitung vektor TF-IDF dan kembalikan sebagai array terurut
 export function getTfIdfVector(text) {
-  const vec = {};
-  tfidf.tfidf(text, (i, measure, term) => {
-    vec[term] = measure;
+  const vector = [];
+  tfidf.tfidf(text, (i, score, term) => {
+    vector.push({ term, score: parseFloat(score.toFixed(4)) });
   });
-  return vec;
+
+  // Urutkan berdasarkan skor tertinggi
+  return vector.sort((a, b) => b.score - a.score);
 }
 
-// Panggil OpenAI embeddings (text-embedding-ada-002)
+// Panggil OpenAI untuk menghasilkan embedding berbasis BERT
 export async function getBertEmbedding(text) {
   const resp = await openai.embeddings.create({
     model: 'text-embedding-ada-002',
