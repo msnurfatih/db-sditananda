@@ -1,75 +1,220 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import Layout from '@/components/Layout';
-import { supabase } from '@/utils/supabaseClient';
+import Layout from '@/components/Layout'
+import { supabase } from '@/utils/supabaseClient'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  LineChart, Line
+} from 'recharts';
+import jsPDF from 'jspdf';
+import toast from 'react-hot-toast';
 
-export default function TambahSiswaPage() {
+export default function ProfilSiswaPage() {
   const router = useRouter();
+  const { id } = router.query;
 
-  const [nisn, setNisn] = useState('');
-  const [nama, setNama] = useState('');
-  const [kelas, setKelas] = useState('');
-  const [jenisKelamin, setJenisKelamin] = useState('');
-  const [tempatLahir, setTempatLahir] = useState('');
-  const [tanggalLahir, setTanggalLahir] = useState('');
-  const [alamat, setAlamat] = useState('');
+  const [siswa, setSiswa] = useState(null);
+  const [observasi, setObservasi] = useState([]);
+  const [analisis, setAnalisis] = useState(null);
+  const [evaluasiAI, setEvaluasiAI] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showObservasi, setShowObservasi] = useState(false); // untuk expand/collapse
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) return router.replace('/login');
 
-    if (!nisn.trim() || !nama.trim() || !kelas.trim()) {
-      alert('NISN, Nama, dan Kelas wajib diisi');
-      return;
-    }
+      const { data: siswaData } = await supabase
+        .from('siswa')
+        .select('*')
+        .eq('id', id)
+        .single();
+      setSiswa(siswaData);
 
-    if (!/^\d{10}$/.test(nisn)) {
-      alert('NISN harus terdiri dari 10 digit angka');
-      return;
-    }
+      const { data: obsData } = await supabase
+        .from('jawaban_observasi')
+        .select('jawaban, waktu_observasi')
+        .eq('siswa_id', id)
+        .order('waktu_observasi', { ascending: true });
+      setObservasi(obsData || []);
 
-    const user = await supabase.auth.getUser();
-    const guru_id = user?.data?.user?.id;
+      const { data: hasil } = await supabase
+        .from('hasil_observasi')
+        .select('hasil_analisis')
+        .eq('siswa_id', id)
+        .order('created_at', { descending: true })
+        .limit(1)
+        .single();
+      setAnalisis(hasil?.hasil_analisis || null);
 
-    const { error } = await supabase.from('siswa').insert([
-      {
-        nisn,
-        nama,
-        kelas,
-        jenis_kelamin: jenisKelamin,
-        tempat_lahir: tempatLahir,
-        tanggal_lahir: tanggalLahir,
-        alamat,
-        guru_id,
-      },
-    ]);
+      const { data: evaluasiData, error: evalError } = await supabase
+        .from('evaluasi')
+        .select('id, siswa_id, karakter, strategi, created_at')
+        .eq('siswa_id', id)
+        .order('created_at', { descending: true })
+        .limit(1)
+        .single();
 
-    if (error) {
-      console.error(error);
-      alert(`❌ Gagal menambahkan siswa: ${error.message}`);
-    } else {
-      alert('✅ Siswa berhasil ditambahkan!');
-      router.push('/dashboard/siswa');
+      if (evalError) console.error("Evaluasi Error:", evalError);
+
+      setEvaluasiAI(evaluasiData || null);
+
+      setLoading(false);
+    })();
+  }, [id]);
+
+  const exportPDF = async () => {
+    const tId = toast.loading('Membuat PDF...');
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 10;
+      let y = 10;
+
+      doc.setFontSize(16);
+      doc.text('Laporan Profil Siswa', pageWidth / 2, y, { align: 'center' });
+      y += 10;
+
+      doc.setFontSize(12);
+      doc.text(`Nama: ${siswa.nama}`, margin, y); y += 8;
+      doc.text(`NISN: ${siswa.nisn}`, margin, y); y += 8;
+      doc.text(`Kelas: ${siswa.kelas}`, margin, y); y += 8;
+      doc.text(`Tempat Lahir: ${siswa.tempat_lahir}`, margin, y); y += 8;
+      doc.text(`Tanggal Lahir: ${siswa.tanggal_lahir}`, margin, y); y += 8;
+      doc.text(`Alamat: ${siswa.alamat}`, margin, y); y += 12;
+
+      if (evaluasiAI) {
+        doc.setFontSize(13);
+        doc.setTextColor(40, 100, 60);
+        doc.text('Hasil Evaluasi AI:', margin, y); y += 8;
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+
+        const charLines = doc.splitTextToSize(`Karakter: ${evaluasiAI.karakter}`, pageWidth - 2 * margin);
+        const stratLines = doc.splitTextToSize(`Strategi: ${evaluasiAI.strategi}`, pageWidth - 2 * margin);
+
+        [...charLines, '', ...stratLines].forEach(line => {
+          if (y > 270) { doc.addPage(); y = 10; }
+          doc.text(line, margin, y);
+          y += 6;
+        });
+
+        y += 6;
+      }
+
+      if (analisis) {
+        doc.setFontSize(13);
+        doc.setTextColor(40, 40, 160);
+        doc.text('Hasil Analisis Karakter AI:', margin, y); y += 8;
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
+
+        const lines = doc.splitTextToSize(analisis, pageWidth - 2 * margin);
+        lines.forEach(line => {
+          if (y > 270) { doc.addPage(); y = 10; }
+          doc.text(line, margin, y);
+          y += 6;
+        });
+      }
+
+      doc.save(`${siswa.nama}_Laporan.pdf`);
+      toast.success('PDF berhasil dibuat!', { id: tId });
+    } catch (err) {
+      toast.error('Gagal membuat PDF', { id: tId });
+      console.error(err);
     }
   };
 
+  const barChartData = observasi.map((item, i) => ({
+    name: `#${i + 1}`,
+    value: parseFloat(item.jawaban) || 0,
+  }));
+
+  const lineChartData = observasi.map((item) => ({
+    date: new Date(item.waktu_observasi).toLocaleDateString(),
+    value: parseFloat(item.jawaban) || 0,
+  }));
+
+  if (loading || !siswa) return <Layout><p className="p-6">Loading...</p></Layout>;
+
   return (
-    <Layout pageTitle="Tambah Siswa">
-      <div className="p-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">➕ Tambah Siswa</h1>
+    <Layout>
+      <div className="max-w-3xl mx-auto p-6 space-y-6">
+        <h1 className="text-2xl font-bold">Profil Siswa</h1>
+        <div className="grid gap-3">
+          <input className="border p-2 rounded" value={siswa.nama || ''} readOnly />
+          <input className="border p-2 rounded" value={siswa.nisn || ''} readOnly />
+          <input className="border p-2 rounded" value={siswa.kelas || ''} readOnly />
+          <input className="border p-2 rounded" value={siswa.tempat_lahir || ''} readOnly />
+          <input className="border p-2 rounded" value={siswa.tanggal_lahir || ''} readOnly />
+          <input className="border p-2 rounded" value={siswa.alamat || ''} readOnly />
+        </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4">
-          <input value={nisn} onChange={(e) => setNisn(e.target.value)} placeholder="NISN (10 digit)" className="border p-2 rounded" />
-          <input value={nama} onChange={(e) => setNama(e.target.value)} placeholder="Nama Lengkap" className="border p-2 rounded" />
-          <input value={kelas} onChange={(e) => setKelas(e.target.value)} placeholder="Kelas" className="border p-2 rounded" />
-          <input value={jenisKelamin} onChange={(e) => setJenisKelamin(e.target.value)} placeholder="Jenis Kelamin" className="border p-2 rounded" />
-          <input value={tempatLahir} onChange={(e) => setTempatLahir(e.target.value)} placeholder="Tempat Lahir" className="border p-2 rounded" />
-          <input value={tanggalLahir} onChange={(e) => setTanggalLahir(e.target.value)} type="date" className="border p-2 rounded" />
-          <input value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Alamat" className="border p-2 rounded" />
+        {evaluasiAI && (
+          <div className="border-l-4 border-green-500 bg-green-50 p-4 text-sm text-green-900">
+            <strong className="text-green-700 block mb-2">🧠 Hasil Evaluasi AI</strong>
+            <p><strong>Karakter:</strong> {evaluasiAI.karakter}</p>
+            <p className="mt-1"><strong>Strategi:</strong> {evaluasiAI.strategi}</p>
+          </div>
+        )}
 
-          <button type="submit" className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
-            Simpan Siswa
+        {analisis && (
+          <div className="border-l-4 border-indigo-500 bg-indigo-50 p-4 text-sm text-indigo-900">
+            <strong className="text-indigo-700 block mb-2">📘 Hasil Analisis Karakter AI</strong>
+            <div className="whitespace-pre-wrap break-words leading-relaxed">
+              {analisis}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h2 className="text-lg font-semibold mb-2">📜 Riwayat Observasi</h2>
+          <button
+            onClick={() => setShowObservasi(!showObservasi)}
+            className="text-blue-600 underline text-sm mb-2"
+          >
+            {showObservasi ? '🔽 Sembunyikan Riwayat' : '▶️ Lihat Riwayat'}
           </button>
-        </form>
+
+          {showObservasi && (
+            <ul className="list-disc pl-5 space-y-1 text-sm">
+              {observasi.map((o, i) => (
+                <li key={i}>
+                  {new Date(o.waktu_observasi).toLocaleDateString()} — Jawaban: {o.jawaban}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <h2 className="text-lg font-semibold mb-2">📊 Grafik Observasi</h2>
+          <div className="flex flex-wrap gap-8">
+            <BarChart width={300} height={200} data={barChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#8884d8" />
+            </BarChart>
+
+            <LineChart width={300} height={200} data={lineChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#82ca9d" />
+            </LineChart>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <button onClick={exportPDF} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+            Export PDF
+          </button>
+        </div>
       </div>
     </Layout>
   );
