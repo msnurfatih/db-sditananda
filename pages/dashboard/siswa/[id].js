@@ -17,8 +17,6 @@ export default function ProfilSiswaPage() {
   const [observasi, setObservasi] = useState([]);
   const [analisis, setAnalisis] = useState(null);
   const [evaluasiAI, setEvaluasiAI] = useState(null);
-  const [tfidfResult, setTfidfResult] = useState(null);
-  const [embedResult, setEmbedResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showObservasi, setShowObservasi] = useState(false); // untuk expand/collapse
 
@@ -66,42 +64,6 @@ export default function ProfilSiswaPage() {
       setLoading(false);
     })();
   }, [id]);
-
-  const analyzeTfidf = async () => {
-    const last = observasi[observasi.length - 1];
-    if (!last) return toast.error('Belum ada observasi');
-    const tId = toast.loading('Analisis TF-IDF...');
-    try {
-      const res = await fetch('/api/analyze/tfidf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: last.jawaban }),
-      });
-      const { vector } = await res.json();
-      setTfidfResult(vector);
-      toast.success('Selesai TF-IDF', { id: tId });
-    } catch (err) {
-      toast.error('Gagal TF-IDF: ' + err.message, { id: tId });
-    }
-  };
-
-  const analyzeEmbedding = async () => {
-    const last = observasi[observasi.length - 1];
-    if (!last) return toast.error('Belum ada observasi');
-    const tId = toast.loading('Analisis Embedding...');
-    try {
-      const res = await fetch('/api/analyze/embedding', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: last.jawaban }),
-      });
-      const { embedding } = await res.json();
-      setEmbedResult(embedding);
-      toast.success('Selesai Embedding', { id: tId });
-    } catch (err) {
-      toast.error('Gagal Embedding: ' + err.message, { id: tId });
-    }
-  };
 
   const exportPDF = async () => {
     const tId = toast.loading('Membuat PDF...');
@@ -249,32 +211,11 @@ export default function ProfilSiswaPage() {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button onClick={analyzeTfidf} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
-            TF-IDF
-          </button>
-          <button onClick={analyzeEmbedding} className="bg-indigo-800 text-white px-4 py-2 rounded hover:bg-indigo-900">
-            Embedding
-          </button>
           <button onClick={exportPDF} className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
             Export PDF
           </button>
         </div>
-
-        {(tfidfResult || embedResult) && (
-          <div className="bg-gray-100 p-4 rounded text-sm">
-            {tfidfResult && (
-              <>
-                <h3 className="font-bold">TF-IDF:</h3>
-                <pre className="whitespace-pre-wrap overflow-auto">{JSON.stringify(tfidfResult, null, 2)}</pre>
-              </>
-            )}
-            {embedResult && (
-              <p className="mt-2">Embedding length: {embedResult.length}</p>
-            )}
-          </div>
-        )}
       </div>
     </Layout>
   );
 }
-
